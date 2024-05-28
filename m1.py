@@ -13,6 +13,7 @@ from prophet import Prophet
 import numpy as np
 from prophet.plot import plot_plotly
 import matplotlib.font_manager as fm
+import os
 
 def home():
     st.markdown("### 기계학습 예측 개요 \n"
@@ -20,31 +21,36 @@ def home():
                 "- 자치구별 평균 가격 예측 그래프 추세 \n"
                 "- 사용한 알고리즘 : metad의 prophet \n")
 
+def load_font():
+    try:
+        path = os.path.join('fonts', 'H2MJRE.TTF')
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"Font file not found at {path}")
+        return fm.FontProperties(fname=path, size=12)
+    except Exception as e:
+        st.error(f"Error loading font: {e}")
+        return None
+
 def predictType(total_df):
-    # 한글 폰트 설정
-    path = 'C:/Windows/Fonts/H2MJRE.TTF'
-    fontprop = fm.FontProperties(fname=path, size=12)
+    fontprop = load_font()
+    if fontprop is None:
+        fontprop = fm.FontProperties(size=12)  # 기본 폰트 사용
+
     total_df['DEAL_YMD'] = pd.to_datetime(total_df['DEAL_YMD'], format='%Y-%m-%d')
     types = list(total_df['HOUSE_TYPE'].unique())
     periods = int(st.number_input('향후 예측 기간을 지정하세요(1일 ~ 30일)', min_value=1, max_value=30, step=1))
     
     fig, ax = plt.subplots(figsize=(10, 6), sharex=True, ncols=2, nrows=2)
     for i in range(0, len(types)):
-        # 프로핏 모델 객체 인스턴스 만들기
         model = Prophet()
-        # 훈련 데이터(데이터프레임) 만들기
         total_df2 = total_df.loc[total_df['HOUSE_TYPE'] == types[i], ['DEAL_YMD', 'OBJ_AMT']]
         summary_df = total_df2.groupby('DEAL_YMD')['OBJ_AMT'].agg('mean').reset_index()
         summary_df = summary_df.rename(columns={'DEAL_YMD': 'ds', 'OBJ_AMT': 'y'})
-        # 훈련 데이터(데이터프레임)로 학습(피팅)하여 prophet 모델 만들기
         model.fit(summary_df)
-        # 예측결과를 저장할 데이터프레임 준비하기
         future1 = model.make_future_dataframe(periods=periods)
-        # 예측하기
         forcast1 = model.predict(future1)
         x = i // 2
         y = i % 2
-        # 주거 유형별 예측치 시각화
         fig = model.plot(forcast1, uncertainty=True, ax=ax[x, y])
         ax[x, y].set_title(f'서울시 {types[i]} 평균 가격 예측 시나리오 {periods}일간', fontproperties=fontprop)
         ax[x, y].set_xlabel('날짜', fontproperties=fontprop)
@@ -55,9 +61,10 @@ def predictType(total_df):
     st.pyplot(fig)
 
 def predictDistrict(total_df):
-    # 한글 폰트 설정
-    path = 'C:/Windows/Fonts/H2MJRE.TTF'
-    fontprop = fm.FontProperties(fname=path, size=12)
+    fontprop = load_font()
+    if fontprop is None:
+        fontprop = fm.FontProperties(size=12)  # 기본 폰트 사용
+
     total_df['DEAL_YMD'] = pd.to_datetime(total_df['DEAL_YMD'], format='%Y-%m-%d')
     total_df = total_df[total_df['HOUSE_TYPE'] == '아파트']
     sgg_nms = list(total_df['SGG_NM'].unique())
@@ -67,21 +74,16 @@ def predictDistrict(total_df):
     fig, ax = plt.subplots(figsize=(20, 10), sharex=True, sharey=False, ncols=5, nrows=5)
     loop = 0
     for sgg_nm in sgg_nms:
-        # 프로핏 모델 객체 인스턴스 만들기
         model = Prophet()
         total_df2 = total_df.loc[total_df['SGG_NM'] == sgg_nm, ['DEAL_YMD', 'OBJ_AMT']]
         summary_df = total_df2.groupby('DEAL_YMD')['OBJ_AMT'].agg('mean').reset_index()
         summary_df = summary_df.rename(columns={'DEAL_YMD': 'ds', 'OBJ_AMT': 'y'})
-        # 훈련 데이터(데이터프레임)로 학습(피팅)하여 prophet 모델 만들기
         model.fit(summary_df)
-        # 예측결과를 저장할 데이터프레임 준비하기
         future = model.make_future_dataframe(periods=periods)
-        # 예측하기
         forcast = model.predict(future)
         x = loop // 5
         y = loop % 5
         loop += 1
-        # 자치구별 예측치 시각화
         fig = model.plot(forcast, uncertainty=True, ax=ax[x, y])
         ax[x, y].set_title(f'서울시 {sgg_nm} 평균 가격 예측 시나리오 {periods}일간', fontproperties=fontprop)
         ax[x, y].set_xlabel('날짜', fontproperties=fontprop)
@@ -98,11 +100,8 @@ def reportMain(total_df):
     total_df2 = total_df.loc[total_df['SGG_NM'] == sgg_nm, ['DEAL_YMD', 'OBJ_AMT']]
     summary_df = total_df2.groupby('DEAL_YMD')['OBJ_AMT'].agg('mean').reset_index()
     summary_df = summary_df.rename(columns={'DEAL_YMD': 'ds', 'OBJ_AMT': 'y'})
-    # 훈련 데이터(데이터프레임)로 학습(피팅)하여 prophet 모델 만들기
     model.fit(summary_df)
-    # 예측결과를 저장할 데이터프레임 준비하기
     future = model.make_future_dataframe(periods=periods)
-    # 예측하기
     forcast = model.predict(future)
     csv = forcast.to_csv(index=False).encode('utf-8')
     st.sidebar.download_button('결과 다운로드(CSV)', csv, f'{sgg_nm}_아파트 평균 예측 {periods}일간.csv', 'text/csv', key='download-csv')
