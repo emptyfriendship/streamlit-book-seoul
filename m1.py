@@ -23,7 +23,7 @@ def home():
 
 def load_font():
     try:
-        path = os.path.join('fonts', 'H2MJRE.TTF')
+        path = os.path.join('fonts', 'H2MJRE.ttf')
         if not os.path.isfile(path):
             raise FileNotFoundError(f"Font file not found at {path}")
         return fm.FontProperties(fname=path, size=12)
