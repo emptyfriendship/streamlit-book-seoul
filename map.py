@@ -5,19 +5,28 @@ Created on Tue May 21 14:41:03 2024
 @author: 213
 """
 
-import pandas as pd
 import streamlit as st
+import pandas as pd
 import geopandas as gpd
 
 import matplotlib.pyplot as plt
 import plotly.express as px
 
 import matplotlib.font_manager as fm
+import os
+
+def load_font():
+    try:
+        path = os.path.join('fonts', 'H2MJRE.ttf')
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"Font file not found at {path}")
+        return fm.FontProperties(fname=path, size=12)
+    except Exception as e:
+        st.error(f"Error loading font: {e}")
+        return fm.FontProperties(size=12)
 
 def mapMatplotlib(merge_df):
-    # 한글 폰트 설정
-    path = 'C:\\Windows\\Fonts\\H2MJRE.TTF'
-    fontprop = fm.FontProperties(fname=path, size=12)
+    fontprop = load_font()
 
     # 서브플롯 생성
     fig, ax = plt.subplots(ncols=2, sharey=True, figsize=(15, 10))
@@ -87,4 +96,3 @@ def showMap(total_df):
     # 지도 생성 및 표시
     st.markdown("### Matplotlib Style")
     mapMatplotlib(merge_df)
-
